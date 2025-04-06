@@ -1,0 +1,258 @@
+﻿<!DOCTYPE html>
+<html lang="az">
+<head>
+    <link rel="stylesheet" href="soncss.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxford Xoşbəxtlik Testi</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<link rel="stylesheet" href="soncss.css">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oxford Xoşbəxtlik Testi</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<body>
+    <div class="top-nav">
+        <a href="#" onclick="showLogin()">Admin Panel</a>
+    </div>
+    <div class="container" id="mainContainer">
+        <h1>Oxford Xoşbəxtlik Testi</h1>
+        <form id="quizForm">
+            <div class="field">
+                <label for="ad">Ad:</label>
+                <input type="text" id="ad" required>
+            </div>
+            <div class="field">
+                <label for="soyad">Soyad:</label>
+                <input type="text" id="soyad" required>
+            </div>
+            <div class="field">
+                <label for="fakulte">Fakültə:</label>
+                <select id="fakulte" required>
+                    <option value="">Fakültəni seçin</option>
+                    <option value="İncəsənət fakültəsi">İncəsənət fakültəsi</option>
+                    <option value="İqtisadiyyat fakültəsi">İqtisadiyyat fakültəsi</option>
+                    <option value="Mühəndislik fakültəsi">Mühəndislik fakültəsi</option>
+                    <option value="Humanitar və sosial elmlər fakültəsi">Humanitar və sosial elmlər fakültəsi</option>
+                    <option value="Pedaqoji fakültə">Pedaqoji fakültə</option>
+                    <option value="Turizm fakültəsi">Turizm fakültəsi</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="yas">Yaş:</label>
+                <input type="number" id="yas" required>
+            </div>
+            <div id="questions"></div>
+            <button type="button" onclick="submitQuiz()">Nəticəni Göstər</button>
+        </form>
+        <div id="result" class="result"></div>
+        <div id="resultInterpretation" class="result-interpretation"></div>
+    </div>
+
+    <div id="adminLogin" style="display:none; padding:30px; text-align:center;">
+        <h2>Admin Girişi</h2>
+        <input type="password" id="adminPassword" placeholder="Şifrə" style="padding:10px; width:200px; border-radius:8px;">
+        <button onclick="checkPassword()">Daxil ol</button>
+    </div>
+
+    <div class="container admin-section" id="adminPanel" style="display:none;">
+        <h2>Nəticələr</h2>
+        <div id="allResults"></div>
+        <canvas id="facultyChart" width="400" height="200" style="margin-top: 40px;"></canvas>
+        <button class="back-button" onclick="exitAdminPanel()">Geri qayıt</button>
+    </div>
+
+    <script>
+        const questions = [
+            "Olduğum halımdan məmnun deyiləm. (R)",
+            "Digər insanlar məniə çox maraqlandırır.",
+            "Həyatın çox mükafatlandırıcı olduğunu hiss edirəm.",
+            "Demək olar ki, hər kəsə çox isti hisslər bəsləyirəm.",
+            "Nadir hallarda tam dincəlmiş olaraq oyanıram. (R)",
+            "Gələcəyimə dair heç optimist deyiləm. (R)",
+            "Çox şeyin gülməli olduğunu düşünürəm.",
+            "Həmişə plana bağlıyam və girişkənəm.",
+            "Həyat yaxşıdır.",
+            "Dünyanın yaxşı bir yer olduğuna inanmıram. (R)",
+            "Çox güldürəm.",
+            "Həyatımda hər şeydən çox məmnunam.",
+            "Özümü cazibədar hiss etmirəm. (R)",
+            "Edə biləcəyimlə, etdiklərim arasında bir boşluq var. (R)",
+            "Çox xoşbəxtəm.",
+            "Bəzi şeylərdə gözəllik görürəm.",
+            "Həmişə başqalarına xoş bir təsir bağışlayıram.",
+            "Hər şeyi etmək üçün vaxt tapıram.",
+            "Həyatımın idarəsinin nəzarəti məndə deyil kimi hiss edirəm. (R)",
+            "Hər şeyi üzərimə götürə biləcəyimi hiss edirəm.",
+            "Tamamilə zehni olaraq ayıq hiss edirəm.",
+            "Tez-tez sevinc və şadlıq hiss edirəm.",
+            "Qərar vermək mənim üçün asan olmur. (R)",
+            "Həyatımda xüsusi bir məna və məqsəd hissi yoxdur. (R)",
+            "Çox enerji hiss edirəm.",
+            "Əksər hallarda hadisələrə yaxşı təsir göstərə bilirəm.",
+            "Başqalari ilə əylənmək mənim üçün asan deyil. (R)",
+            "Özümü elə də sağlam hiss etmirəm. (R)",
+            "Keçmişimlə bağlı xüsusi xoş xatirələrim yoxdur. (R)"
+        ];
+
+        const answers = ["Tamamilə razıyam", "Qismən razıyam", "Bir az razıyam", "Bir az razı deyiləm", "Qismən razı deyiləm", "Tamamilə razı deyiləm"];
+        const points = [6, 5, 4, 3, 2, 1];
+        const container = document.getElementById('questions');
+
+        questions.forEach((q, index) => {
+            const isReverse = q.includes("(R)");
+            const cleanQ = q.replace("(R)", "");
+            const div = document.createElement('div');
+            div.className = 'question';
+            const qTitle = document.createElement('p');
+            qTitle.innerText = `${index + 1}. ${cleanQ}`;
+            div.appendChild(qTitle);
+
+            answers.forEach((ans, i) => {
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `q${index}`;
+                input.value = isReverse ? points.slice().reverse()[i] : points[i];
+                label.appendChild(input);
+                label.append(` ${ans}`);
+                div.appendChild(label);
+            });
+
+            container.appendChild(div);
+        });
+
+        const resultEl = document.getElementById('result');
+        const interpretationEl = document.getElementById('resultInterpretation');
+        let allResults = JSON.parse(localStorage.getItem('quizResults')) || [];
+
+        function interpretScore(score) {
+            if (score <= 87) return "Çox aşağı xoşbəxtlik";
+            else if (score <= 116) return "Orta səviyyədən aşağı";
+            else if (score <= 145) return "Orta xoşbəxtlik";
+            else if (score <= 162) return "Yüksək xoşbəxtlik";
+            else return "Çox yüksək xoşbəxtlik";
+        }
+
+        function submitQuiz() {
+            let score = 0;
+            const name = document.getElementById('ad').value.trim();
+            const surname = document.getElementById('soyad').value.trim();
+            const faculty = document.getElementById('fakulte').value.trim();
+            const age = document.getElementById('yas').value.trim();
+
+            if (!name || !surname || !faculty || !age) {
+                alert('Zəhmət olmasa bütün məlumatları doldurun.');
+                return;
+            }
+
+            for (let i = 0; i < questions.length; i++) {
+                const radios = document.getElementsByName(`q${i}`);
+                const selected = Array.from(radios).some(r => r.checked);
+                if (!selected) {
+                    alert('Zəhmət olmasa bütün sualları cavablandırın.');
+                    return;
+                }
+                for (const radio of radios) {
+                    if (radio.checked) {
+                        score += parseInt(radio.value);
+                    }
+                }
+            }
+
+            resultEl.innerText = `Qiymətləndirmə: ${interpretScore(score)}`;
+            interpretationEl.innerText = "";
+
+            const newResult = { ad: name, soyad: surname, fakulte: faculty, yas: age, bal: score };
+            allResults.push(newResult);
+            localStorage.setItem('quizResults', JSON.stringify(allResults));
+
+            document.getElementById('quizForm').reset();
+        }
+
+        function showLogin() {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('adminLogin').style.display = 'block';
+        }
+
+        function checkPassword() {
+            const pass = document.getElementById('adminPassword').value;
+            if (pass === 'Sumqayıt') {
+                document.getElementById('adminLogin').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                showResults();
+            } else {
+                alert('Şifrə yanlışdır!');
+            }
+        }
+
+        function showResults() {
+            const div = document.getElementById('allResults');
+            div.innerHTML = '';
+            allResults.forEach((r, idx) => {
+                const p = document.createElement('p');
+                p.innerText = `${idx + 1}) ${r.ad} ${r.soyad} | Fakültə: ${r.fakulte} | Yaş: ${r.yas} | Bal: ${r.bal}`;
+                div.appendChild(p);
+            });
+
+            // Fakültəyə görə ortalama bal hesabla
+            const facultyMap = {};
+            allResults.forEach(r => {
+                if (!facultyMap[r.fakulte]) {
+                    facultyMap[r.fakulte] = { total: 0, count: 0 };
+                }
+                facultyMap[r.fakulte].total += r.bal;
+                facultyMap[r.fakulte].count++;
+            });
+
+            const facultyNames = Object.keys(facultyMap);
+            const averageScores = facultyNames.map(f => (facultyMap[f].total / facultyMap[f].count).toFixed(2));
+
+            // Diaqramı çək
+            const ctx = document.getElementById('facultyChart').getContext('2d');
+            if (window.facultyChartInstance) {
+                window.facultyChartInstance.destroy();
+            }
+            window.facultyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: facultyNames,
+                    datasets: [{
+                        label: 'Ortalama Bal',
+                        data: averageScores,
+                        backgroundColor: 'rgba(0, 119, 204, 0.6)',
+                        borderColor: 'rgba(0, 119, 204, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 180
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function exitAdminPanel() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
